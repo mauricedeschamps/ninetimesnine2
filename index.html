@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>九九であそぼう！</title>
+    <!-- PWA マニフェスト -->
+    <link rel="manifest" href="manifest.json">
+    <!-- ファビコン（SVG） -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text x='50%' y='50%' font-size='60' text-anchor='middle' dominant-baseline='middle' fill='%23bb86fc'>9×9</text></svg>">
+    <!-- iOS 用アイコン（省略可） -->
+    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text x='50%' y='50%' font-size='60' text-anchor='middle' dominant-baseline='middle' fill='%23bb86fc'>9×9</text></svg>">
+    <style>
+        /* ライトモードとダークモードのカラー変数 */
+        :root {
+            --bg-color: #f5f5f5;
+            --text-color: #333;
+            --primary-color: #1a73e8;
+            --btn-bg: white;
+            --btn-text: #1a73e8;
+            --btn-shadow: rgba(0,0,0,0.1);
+            --nav-btn-bg: #f0f0f0;
+            --nav-btn-text: #333;
+            --footer-text: #666;
+            --sound-btn-bg: #1a73e8;
+            --sound-btn-text: white;
+            --border-color: #ddd;
+            --active-bg: #1a73e8;
+            --active-text: white;
+        }
+
+        body.dark-mode {
+            --bg-color: #121212;
+            --text-color: #e0e0e0;
+            --primary-color: #bb86fc;
+            --btn-bg: #1e1e1e;
+            --btn-text: #bb86fc;
+            --btn-shadow: rgba(255,255,255,0.1);
+            --nav-btn-bg: #333;
+            --nav-btn-text: #e0e0e0;
+            --footer-text: #aaa;
+            --sound-btn-bg: #bb86fc;
+            --sound-btn-text: #121212;
+            --border-color: #444;
+            --active-bg: #bb86fc;
+            --active-text: #121212;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            text-align: center;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        .logo {
+            font-size: 48px;
+            margin: 10px 0;
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+        .language-switcher {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin: 10px 0;
+        }
+        .language-btn {
+            padding: 5px 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            background: var(--btn-bg);
+            color: var(--text-color);
+            cursor: pointer;
+        }
+        .language-btn.active {
+            background: var(--active-bg);
+            color: var(--active-text);
+            border-color: var(--active-bg);
+        }
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin: 20px 0;
+            flex-grow: 1;
+        }
+        .grid-btn {
+            aspect-ratio: 1;
+            font-size: 24px;
+            border: none;
+            border-radius: 15px;
+            background-color: var(--btn-bg);
+            box-shadow: 0 3px 6px var(--btn-shadow);
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--btn-text);
+        }
+        .grid-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 12px var(--btn-shadow);
+        }
+        .grid-btn:active {
+            transform: translateY(0);
+        }
+        .nav-buttons {
+            display: flex;
+            justify-content: space-between;
+            margin: 20px 0;
+        }
+        .nav-btn {
+            padding: 10px 20px;
+            font-size: 18px;
+            border: none;
+            border-radius: 10px;
+            background-color: var(--nav-btn-bg);
+            color: var(--nav-btn-text);
+            cursor: pointer;
+        }
+        .continue-btn {
+            background-color: var(--primary-color);
+            color: var(--active-text);
+        }
+        .screen {
+            display: none;
+            flex-direction: column;
+            flex-grow: 1;
+        }
+        .active {
+            display: flex;
+        }
+        .current-table {
+            font-size: 24px;
+            margin: 10px 0;
+            color: var(--primary-color);
+        }
+        footer {
+            margin-top: auto;
+            padding: 20px 0;
+            font-size: 14px;
+            color: var(--footer-text);
+        }
+        .email-link {
+            color: var(--primary-color);
+            text-decoration: none;
+        }
+        .sound-btn {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background-color: var(--sound-btn-bg);
+            color: var(--sound-btn-text);
+            border: none;
+            font-size: 20px;
+            cursor: pointer;
+            box-shadow: 0 2px 5px var(--btn-shadow);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .table-number {
+            font-size: 32px;
+            font-weight: bold;
+        }
+
+        /* ダークモード切り替えボタン */
+        .dark-mode-toggle {
+            background: none;
+            border: 1px solid var(--border-color);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            font-size: 20px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: var(--btn-bg);
+            color: var(--text-color);
+            margin-left: 10px;
+        }
+        .top-bar {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+    </style>
+</head>
+<body class="dark-mode"> <!-- デフォルトダークモード -->
+    <!-- トップバー -->
+    <div class="top-bar">
+        <div class="language-switcher">
+            <button class="language-btn active" data-lang="en">English</button>
+            <button class="language-btn" data-lang="zh">中文</button>
+            <button class="language-btn" data-lang="ja">日本語</button>
+        </div>
+        <button class="dark-mode-toggle" id="darkModeToggle" aria-label="ダークモード切り替え">🌙</button>
+    </div>
+
+    <!-- 段選択画面 -->
+    <div class="screen active" id="menu-screen">
+        <div class="logo">9×9</div>
+        <div class="current-table" id="menu-title">Select a number (1-9)</div>
+        <div class="grid-container" id="table-grid">
+            <!-- 1-9の数字ボタンがここに生成されます -->
+        </div>
+    </div>
+
+    <!-- 問題選択画面 -->
+    <div class="screen" id="problem-screen">
+        <div class="logo">9×9</div>
+        <div class="current-table" id="current-table-display"></div>
+        <div class="grid-container" id="problem-grid">
+            <!-- 問題ボタンがここに生成されます -->
+        </div>
+        <div class="nav-buttons">
+            <button class="nav-btn" id="back-to-menu">← Back</button>
+            <div></div> <!-- Spacer -->
+        </div>
+    </div>
+
+    <!-- 答え表示画面 -->
+    <div class="screen" id="answer-screen">
+        <div class="logo">9×9</div>
+        <div class="current-table" id="answer-table-display"></div>
+        <div style="font-size: 48px; margin: 30px 0; color: var(--primary-color);" id="question-display"></div>
+        <div style="font-size: 72px; color: var(--primary-color); margin-bottom: 30px;" id="correct-answer"></div>
+        <div class="nav-buttons">
+            <button class="nav-btn" id="back-to-problem">← Back</button>
+            <button class="nav-btn continue-btn" id="continue-btn">Continue →</button>
+        </div>
+    </div>
+
+    <!-- 音声ボタン -->
+    <button class="sound-btn" id="sound-btn">🔊</button>
+
+    <footer>
+        <span id="contact-text">Contact us</span><br>
+        <a href="mailto:mementomorikatsu@gmail.com" class="email-link">mementomorikatsu@gmail.com</a>
+    </footer>
+
+    <script>
+        // PWA サービスワーカー登録
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function() {
+                navigator.serviceWorker.register('sw.js').then(function(registration) {
+                    console.log('ServiceWorker registration successful');
+                }, function(err) {
+                    console.log('ServiceWorker registration failed: ', err);
+                });
+            });
+        }
+
+        // 以下、既存のアプリケーションロジック（前回のコードをそのまま流用）
+        document.addEventListener('DOMContentLoaded', function() {
+            // 多言語対応テキスト
+            const translations = {
+                en: {
+                    menuTitle: "Select a number (1-9)",
+                    back: "Back",
+                    continue: "Continue",
+                    contact: "Contact us",
+                    tableTitle: "Times Table"
+                },
+                zh: {
+                    menuTitle: "选择数字 (1-9)",
+                    back: "返回",
+                    continue: "继续",
+                    contact: "联系我们",
+                    tableTitle: "的乘法表"
+                },
+                ja: {
+                    menuTitle: "数字を選んでください (1-9)",
+                    back: "戻る",
+                    continue: "続ける",
+                    contact: "お問い合わせ",
+                    tableTitle: "の段"
+                }
+            };
+
+            // 数字の多言語表現（今回は不使用だが残しておく）
+            const numberTexts = {
+                en: ["Zero", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine"],
+                zh: ["零", "一", "二", "三", "四", "五", "六", "七", "八", "九"],
+                ja: ["〇", "一", "二", "三", "四", "五", "六", "七", "八", "九"]
+            };
+
+            let currentLang = 'en';
+            let currentTable = 1;
+            let currentMultiplier = 1;
+            
+            // 音声合成設定
+            const synth = window.speechSynthesis;
+            let voices = [];
+            let voice = null;
+
+            function loadVoices() {
+                voices = synth.getVoices();
+                if (currentLang === 'ja') {
+                    voice = voices.find(v => v.lang === 'ja-JP');
+                } else if (currentLang === 'zh') {
+                    voice = voices.find(v => v.lang === 'zh-CN' || v.lang === 'zh-TW');
+                } else {
+                    voice = voices.find(v => v.lang === 'en-US' || v.lang === 'en-GB');
+                }
+                if (!voice && voices.length > 0) voice = voices[0];
+            }
+            if (synth.onvoiceschanged !== undefined) synth.onvoiceschanged = loadVoices;
+            loadVoices();
+
+            function speak(text) {
+                if (synth.speaking) synth.cancel();
+                if (text && voice) {
+                    const utterance = new SpeechSynthesisUtterance(text);
+                    utterance.voice = voice;
+                    utterance.rate = 0.9;
+                    if (currentLang === 'en') {
+                        utterance.lang = 'en-US';
+                        utterance.text = text.replace(/×/g, ' times ').replace(/=/g, ' is ');
+                    } else if (currentLang === 'zh') {
+                        utterance.lang = 'zh-CN';
+                        utterance.text = text.replace(/×/g, ' 乘以 ').replace(/=/g, ' 等于 ');
+                    } else if (currentLang === 'ja') {
+                        utterance.lang = 'ja-JP';
+                        utterance.text = text.replace(/×/g, ' かける ').replace(/=/g, ' は ');
+                    }
+                    synth.speak(utterance);
+                }
+            }
+
+            // DOM要素
+            const menuScreen = document.getElementById('menu-screen');
+            const problemScreen = document.getElementById('problem-screen');
+            const answerScreen = document.getElementById('answer-screen');
+            const tableGrid = document.getElementById('table-grid');
+            const problemGrid = document.getElementById('problem-grid');
+            const currentTableDisplay = document.getElementById('current-table-display');
+            const answerTableDisplay = document.getElementById('answer-table-display');
+            const questionDisplay = document.getElementById('question-display');
+            const correctAnswer = document.getElementById('correct-answer');
+            const backToMenuBtn = document.getElementById('back-to-menu');
+            const backToProblemBtn = document.getElementById('back-to-problem');
+            const continueBtn = document.getElementById('continue-btn');
+            const menuTitle = document.getElementById('menu-title');
+            const contactText = document.getElementById('contact-text');
+            const soundBtn = document.getElementById('sound-btn');
+            const languageBtns = document.querySelectorAll('.language-btn');
+            const darkModeToggle = document.getElementById('darkModeToggle');
+
+            // ダークモード切り替え
+            darkModeToggle.addEventListener('click', function() {
+                document.body.classList.toggle('dark-mode');
+                darkModeToggle.textContent = document.body.classList.contains('dark-mode') ? '🌙' : '☀️';
+            });
+
+            // 言語切り替え
+            languageBtns.forEach(btn => {
+                btn.addEventListener('click', function() {
+                    currentLang = this.dataset.lang;
+                    languageBtns.forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    updateUITexts();
+                    loadVoices();
+                    if (menuScreen.classList.contains('active')) generateTableButtons();
+                    else if (problemScreen.classList.contains('active')) showProblemScreen(currentTable);
+                    else if (answerScreen.classList.contains('active')) showAnswerScreen(currentTable, currentMultiplier);
+                });
+            });
+
+            function updateUITexts() {
+                menuTitle.textContent = translations[currentLang].menuTitle;
+                backToMenuBtn.textContent = translations[currentLang].back;
+                backToProblemBtn.textContent = translations[currentLang].back;
+                continueBtn.textContent = translations[currentLang].continue;
+                contactText.textContent = translations[currentLang].contact;
+            }
+
+            function generateTableButtons() {
+                tableGrid.innerHTML = '';
+                for (let i = 1; i <= 9; i++) {
+                    const btn = document.createElement('button');
+                    btn.className = 'grid-btn';
+                    const numberSpan = document.createElement('span');
+                    numberSpan.className = 'table-number';
+                    numberSpan.textContent = i;
+                    btn.appendChild(numberSpan);
+                    btn.dataset.table = i;
+                    btn.addEventListener('click', function() {
+                        currentTable = parseInt(this.dataset.table);
+                        showProblemScreen(currentTable);
+                    });
+                    tableGrid.appendChild(btn);
+                }
+            }
+
+            function showProblemScreen(table) {
+                currentTableDisplay.textContent = `${table}${translations[currentLang].tableTitle}`;
+                problemGrid.innerHTML = '';
+                for (let i = 1; i <= 9; i++) {
+                    const btn = document.createElement('button');
+                    btn.className = 'grid-btn';
+                    btn.textContent = `${table}×${i}`;
+                    btn.dataset.multiplier = i;
+                    btn.addEventListener('click', function() {
+                        currentMultiplier = parseInt(this.dataset.multiplier);
+                        showAnswerScreen(table, currentMultiplier);
+                    });
+                    problemGrid.appendChild(btn);
+                }
+                menuScreen.classList.remove('active');
+                answerScreen.classList.remove('active');
+                problemScreen.classList.add('active');
+            }
+            
+            function showAnswerScreen(table, multiplier) {
+                answerTableDisplay.textContent = `${table}${translations[currentLang].tableTitle}`;
+                questionDisplay.textContent = `${table} × ${multiplier} = ?`;
+                correctAnswer.textContent = table * multiplier;
+                speak(`${table} × ${multiplier} = ${table * multiplier}`);
+                problemScreen.classList.remove('active');
+                menuScreen.classList.remove('active');
+                answerScreen.classList.add('active');
+            }
+            
+            backToMenuBtn.addEventListener('click', function() {
+                problemScreen.classList.remove('active');
+                answerScreen.classList.remove('active');
+                menuScreen.classList.add('active');
+            });
+            
+            backToProblemBtn.addEventListener('click', function() {
+                answerScreen.classList.remove('active');
+                problemScreen.classList.add('active');
+            });
+
+            continueBtn.addEventListener('click', function() {
+                currentMultiplier = currentMultiplier < 9 ? currentMultiplier + 1 : 1;
+                showAnswerScreen(currentTable, currentMultiplier);
+            });
+
+            soundBtn.addEventListener('click', function() {
+                if (answerScreen.classList.contains('active')) {
+                    speak(`${currentTable} × ${currentMultiplier} = ${currentTable * currentMultiplier}`);
+                }
+            });
+
+            generateTableButtons();
+            updateUITexts();
+            darkModeToggle.textContent = '🌙'; // 初期アイコン
+        });
+    </script>
+</body>
+</html>
